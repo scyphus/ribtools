@@ -317,7 +317,7 @@ parse_table_dump_v2_peer_index_table(
         cptr += 4;
         rest -= 4;
 
-        printf("%d %d %d\n", len, rest, rec[i].peer_type_ipv6);
+        printf("%zu %zu %d\n", len, rest, rec[i].peer_type_ipv6);
         /* by type */
         if ( rec[i].peer_type_ipv6 ) {
             /* IPv6 */
