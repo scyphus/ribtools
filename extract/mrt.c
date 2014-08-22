@@ -1,11 +1,11 @@
 /*_
- * Copyright 2010 Scyphus Solutions Co. Ltd.  All rights reserved.
+ * Copyright (c) 2010 Scyphus Solutions Co. Ltd.
+ * Copyright (c) 2014 Hirochika Asai
+ * All rights reserved.
  *
  * Authors:
- *      Hirochika Asai  <asai@scyphus.co.jp>
+ *      Hirochika Asai  <asai@jar.jp>
  */
-
-/* $Id: mrt.c,v 0d6e5d383a92 2010/08/27 04:28:27 Hirochika $ */
 
 #include "mrt.h"
 #include "bsconv.h"
@@ -134,6 +134,24 @@ parse_table_dump_ip(struct mrt_header *header, unsigned char *body, size_t len)
         /* Length error */
         return -1;
     }
+
+    /* IPv4 */
+    printf("4 ");
+
+    /* Prefix */
+    printf("%d.%d.%d.%d/%d ",
+           (td.prefix.v4 >> 24) & 0xff,
+           (td.prefix.v4 >> 16) & 0xff,
+           (td.prefix.v4 >> 8) & 0xff,
+           td.prefix.v4 & 0xff,
+           td.prefix_length);
+
+    /* Print the peer IP address */
+    printf("%d.%d.%d.%d ", (td.peer_ip_addr.v4 >> 24) & 0xff,
+           (td.peer_ip_addr.v4 >> 16) & 0xff,
+           (td.peer_ip_addr.v4 >> 8) & 0xff,
+           td.peer_ip_addr.v4 & 0xff);
+
     /* Parse attribute */
     print_bgp_attribute(cptr, td.attrlen, 0);
 
@@ -214,6 +232,33 @@ parse_table_dump_ip6(struct mrt_header *header, unsigned char *body, size_t len)
         /* Length error */
         return -1;
     }
+
+    /* IPv6 */
+    printf("6 ");
+
+    /* Prefix */
+    printf("%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x/%d ",
+           (td.prefix.v6[0] >> 16) & 0xffff,
+           td.prefix.v6[0] & 0xffff,
+           (td.prefix.v6[1] >> 16) & 0xffff,
+           td.prefix.v6[1] & 0xffff,
+           (td.prefix.v6[2] >> 16) & 0xffff,
+           td.prefix.v6[2] & 0xffff,
+           (td.prefix.v6[3] >> 16) & 0xffff,
+           td.prefix.v6[3] & 0xffff,
+           td.prefix_length);
+
+    /* Print the peer IP address */
+    printf("%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x ",
+           (td.peer_ip_addr.v6[0] >> 16) & 0xffff,
+           td.peer_ip_addr.v6[0] & 0xffff,
+           (td.peer_ip_addr.v6[1] >> 16) & 0xffff,
+           td.peer_ip_addr.v6[1] & 0xffff,
+           (td.peer_ip_addr.v6[2] >> 16) & 0xffff,
+           td.peer_ip_addr.v6[2] & 0xffff,
+           (td.peer_ip_addr.v6[3] >> 16) & 0xffff,
+           td.peer_ip_addr.v6[3] & 0xffff);
+
     /* Parse attribute */
     parse_bgp_attribute(cptr, td.attrlen, 0);
 
@@ -317,7 +362,7 @@ parse_table_dump_v2_peer_index_table(
         cptr += 4;
         rest -= 4;
 
-        printf("%zu %zu %d\n", len, rest, rec[i].peer_type_ipv6);
+        /*printf("%zu %zu %d\n", len, rest, rec[i].peer_type_ipv6);*/
         /* by type */
         if ( rec[i].peer_type_ipv6 ) {
             /* IPv6 */
@@ -494,6 +539,104 @@ parse_table_dump_v2_rib(
             as4 = 1;
         } else {
             as4 = 0;
+        }
+
+        if ( RIB_IPV4_UNICAST == header->subtype
+             || RIB_IPV4_MULTICAST == header->subtype ) {
+            uint8_t prefix[4];
+            prefix[0] = ribh.prefix[0];
+            prefix[1] = ribh.prefix[1];
+            prefix[2] = ribh.prefix[2];
+            prefix[3] = ribh.prefix[3];
+            switch ( prefix_byte ) {
+            case 0:
+                prefix[0] = 0;
+            case 1:
+                prefix[1] = 0;
+            case 2:
+                prefix[2] = 0;
+            case 3:
+                prefix[3] = 0;
+                break;
+            }
+            /* IPv4 */
+            printf("4 ");
+
+            /* Prefix */
+            printf("%d.%d.%d.%d/%d ",
+                   prefix[0], prefix[1], prefix[2], prefix[3],
+                   ribh.prefix_length);
+
+            /* Print the peer IP address */
+            printf("%d.%d.%d.%d ",
+                (pit->records[entries[i].peer_index].peer_ip_addr.v4 >> 24) & 0xff,
+                (pit->records[entries[i].peer_index].peer_ip_addr.v4 >> 16) & 0xff,
+                (pit->records[entries[i].peer_index].peer_ip_addr.v4 >> 8) & 0xff,
+                pit->records[entries[i].peer_index].peer_ip_addr.v4 & 0xff);
+        } else {
+            uint8_t prefix[16];
+            int j;
+            for ( j = 0; j < 16; j++ ) {
+                prefix[j] = ribh.prefix[j];
+            }
+            switch ( prefix_byte ) {
+            case 0:
+                prefix[0] = 0;
+            case 1:
+                prefix[1] = 0;
+            case 2:
+                prefix[2] = 0;
+            case 3:
+                prefix[3] = 0;
+            case 4:
+                prefix[4] = 0;
+            case 5:
+                prefix[4] = 0;
+            case 6:
+                prefix[4] = 0;
+            case 7:
+                prefix[4] = 0;
+            case 8:
+                prefix[4] = 0;
+            case 9:
+                prefix[4] = 0;
+            case 10:
+                prefix[4] = 0;
+            case 11:
+                prefix[4] = 0;
+            case 12:
+                prefix[4] = 0;
+            case 13:
+                prefix[4] = 0;
+            case 14:
+                prefix[4] = 0;
+            case 15:
+                prefix[4] = 0;
+            case 16:
+                prefix[4] = 0;
+                break;
+            }
+            /* IPv6 */
+            printf("6 ");
+
+            /* Prefix */
+            printf("%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x/%d ",
+                   prefix[0], prefix[1], prefix[2], prefix[3],
+                   prefix[4], prefix[5], prefix[6], prefix[7],
+                   prefix[8], prefix[9], prefix[10], prefix[11],
+                   prefix[12], prefix[13], prefix[14], prefix[15],
+                   ribh.prefix_length);
+
+            /* Print the peer IP address */
+            printf("%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x ",
+                   (pit->records[entries[i].peer_index].peer_ip_addr.v6[0] >> 16) & 0xffff,
+                   pit->records[entries[i].peer_index].peer_ip_addr.v6[0] & 0xffff,
+                   (pit->records[entries[i].peer_index].peer_ip_addr.v6[1] >> 16) & 0xffff,
+                   pit->records[entries[i].peer_index].peer_ip_addr.v6[1] & 0xffff,
+                   (pit->records[entries[i].peer_index].peer_ip_addr.v6[2] >> 16) & 0xffff,
+                   pit->records[entries[i].peer_index].peer_ip_addr.v6[2] & 0xffff,
+                   (pit->records[entries[i].peer_index].peer_ip_addr.v6[3] >> 16) & 0xffff,
+                   pit->records[entries[i].peer_index].peer_ip_addr.v6[3] & 0xffff);
         }
 
         parse_bgp_attribute(cptr, entries[i].attrlen, as4);
